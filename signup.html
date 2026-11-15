@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<link href="css/style.css" rel="stylesheet"><title>SpendWise – signup</title></head><body>
+<div class="auth-wrap"><div class="auth-card">
+ <div class="d-flex justify-content-between align-items-center mb-3"><a class="brand" style="color:var(--ink);margin:0" href="index.html"><i class="bi bi-wallet2"></i>SpendWise</a><span class="d-flex gap-2"><button class="btn-soft theme-btn" aria-label="Theme"></button><button class="btn-soft lang-btn"></button></span></div>
+ <h1 class="h4 fw-bold mb-3" data-i18n="signup_title"></h1>
+ <form id="authForm" data-mode="signup" novalidate>
+  <label class="form-label" data-i18n="name"></label><input class="form-control" name="name"><span class="ferr" data-err="name"></span>
+  <label class="form-label" data-i18n="email"></label><input class="form-control" name="email" type="email" autocomplete="email"><span class="ferr" data-err="email"></span>
+  <label class="form-label mt-2" data-i18n="password"></label><div class="pw"><input class="form-control" name="password" type="password"><button type="button" class="pw-toggle" aria-label="Show or hide password"><i class="bi bi-eye"></i></button></div><span class="ferr" data-err="password"></span>
+  <label class="form-label mt-2" data-i18n="confirm"></label><div class="pw"><input class="form-control" name="confirm" type="password"><button type="button" class="pw-toggle" aria-label="Show or hide password"><i class="bi bi-eye"></i></button></div><span class="ferr" data-err="confirm"></span>
+  <button class="btn-g w-100 justify-content-center mt-3" type="submit" data-i18n="signup"></button>
+ </form>
+ <p class="mt-3 mb-0 text-center"><span class="text-secondary" data-i18n="have_account"></span> <a href="login.html" data-i18n="login"></a></p>
+</div></div><script src="js/app.js"></script><script type="module" src="js/firebase/firebase-bridge.js"></script></body></html>

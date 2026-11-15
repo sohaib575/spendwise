@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function validCategory(c) {
+      return c in ['Food', 'Transport', 'Shopping', 'Education', 'Bills', 'Health', 'Entertainment', 'Other'];
+    }
+
+    /* ---- User profile: only the owner can read or change it ---- */
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'currency', 'monthlyBudget', 'createdAt'])
+        && request.resource.data.uid == userId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && request.resource.data.currency == 'PKR'
+        && request.resource.data.monthlyBudget is number && request.resource.data.monthlyBudget >= 0
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'currency', 'monthlyBudget', 'createdAt'])
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && request.resource.data.monthlyBudget is number && request.resource.data.monthlyBudget >= 0;
+      allow delete: if false;
+    }
+
+    /* ---- Transactions ---- */
+    function validTransaction(d) {
+      return d.keys().hasOnly(['transactionId', 'userId', 'title', 'amount', 'type', 'category', 'date', 'description', 'createdAt'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 60
+        && d.amount is number && d.amount > 0
+        && d.type in ['income', 'expense']
+        && validCategory(d.category)
+        && d.date is string && d.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && d.description is string && d.description.size() <= 200;
+    }
+    match /transactions/{transactionId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.transactionId == transactionId
+        && request.resource.data.createdAt == request.time
+        && validTransaction(request.resource.data);
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.transactionId == resource.data.transactionId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validTransaction(request.resource.data);
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    /* ---- Budgets (category "monthly" is the overall monthly budget) ---- */
+    function validBudget(d, id) {
+      return d.keys().hasOnly(['budgetId', 'userId', 'category', 'limit', 'month', 'year', 'createdAt'])
+        && d.budgetId == id
+        && (d.category == 'monthly' || validCategory(d.category))
+        && d.limit is number && d.limit > 0
+        && d.month is int && d.month >= 1 && d.month <= 12
+        && d.year is int && d.year >= 2000 && d.year <= 2100;
+    }
+    match /budgets/{budgetId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && validBudget(request.resource.data, budgetId);
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == request.time
+        && validBudget(request.resource.data, budgetId);
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    /* Everything else is blocked */
+    match /{document=**} { allow read, write: if false; }
+  }
+}

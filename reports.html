@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=Noto+Naskh+Arabic:wght@400;600&display=swap" rel="stylesheet">
+<link href="css/style.css" rel="stylesheet"><title>SpendWise – Reports</title></head><body data-page="reports">
+<div id="sidebar"></div><div class="main"><header id="topbar"></header><main class="content">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3"><h1 class="pt mb-0" data-i18n="reports_title"></h1>
+ <div class="d-flex align-items-center gap-2"><label class="form-label mb-0" data-i18n="month"></label><input id="rMonth" type="month" class="form-control"></div></div>
+<div class="row g-3 mb-3" id="rStats"></div>
+<div class="row g-3 mb-3">
+ <div class="col-lg-7"><div class="card-sw"><h2 data-i18n="ie_chart"></h2><div class="chart-box"><canvas id="ieChart"></canvas></div></div></div>
+ <div class="col-lg-5"><div class="card-sw"><h2 data-i18n="sav_chart"></h2><div class="chart-box"><canvas id="savChart"></canvas></div></div></div>
+</div>
+<div class="card-sw"><h2 data-i18n="cat_analysis"></h2><div class="table-responsive"><table class="tbl"><thead><tr><th data-i18n="category"></th><th data-i18n="amount"></th><th data-i18n="share"></th></tr></thead><tbody id="rCats"></tbody></table></div></div>
+</main></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script><script src="js/app.js"></script>
+<script>
+/* Reports page: monthly summary, category analysis, income vs expense, savings overview */
+let c1, c2; $('rMonth').value = thisMonth();
+function stat(icon, label, val){ return '<div class="col-6 col-xl-3"><div class="card-sw stat"><div class="ic"><i class="bi '+icon+'"></i></div><div><small>'+label+'</small><b>'+val+'</b></div></div></div>'; }
+function draw(){
+  const all = DB.tx(), m = $('rMonth').value || thisMonth(), mt = all.filter(x => x.date.startsWith(m));
+  const inc = sum(mt.filter(x => x.type === 'income')), expL = mt.filter(x => x.type === 'expense'), exp = sum(expL);
+  const allNet = sum(all.filter(x => x.type === 'income')) - sum(all.filter(x => x.type === 'expense'));
+  $('rStats').innerHTML = stat('bi-arrow-down-left', t('income'), fmt(inc)) + stat('bi-arrow-up-right', t('expenses'), fmt(exp)) +
+    stat('bi-piggy-bank', t('net'), fmt(inc - exp)) + stat('bi-percent', t('rate'), (inc ? Math.round((inc - exp) / inc * 100) : 0) + '%');
+  const cats = CATS.filter(c => expL.some(x => x.category === c)).sort((a, b) => sum(expL.filter(x => x.category === b)) - sum(expL.filter(x => x.category === a)));
+  $('rCats').innerHTML = cats.length ? cats.map(c => { const v = sum(expL.filter(x => x.category === c)), p = Math.round(v / exp * 100);
+    return '<tr><td><span class="chip">'+t('cat_'+c)+'</span></td><td>'+fmt(v)+'</td><td style="min-width:160px"><div class="bar"><i style="width:'+p+'%"></i></div><small>'+p+'%</small></td></tr>'; }).join('')
+    : '<tr><td colspan="3" class="empty">'+t('no_data')+'</td></tr>';
+  const ms = lastMonths(6), by = (k, ty) => sum(all.filter(x => x.type === ty && x.date.startsWith(k)));
+  Chart.defaults.font.family = 'Manrope, Noto Naskh Arabic, sans-serif'; if (c1) c1.destroy(); if (c2) c2.destroy();
+  c1 = new Chart($('ieChart'), {type: 'bar', data: {labels: ms.map(monthLabel), datasets: [
+    {label: t('income'), data: ms.map(k => by(k, 'income')), backgroundColor: '#12B76A', borderRadius: 6},
+    {label: t('expenses'), data: ms.map(k => by(k, 'expense')), backgroundColor: '#5B7BA8', borderRadius: 6}]}, options: {maintainAspectRatio: false}});
+  c2 = new Chart($('savChart'), {type: 'line', data: {labels: ms.map(monthLabel), datasets: [{label: t('net') + ' (' + t('total_saved') + ': ' + fmt(allNet) + ')',
+    data: ms.map(k => by(k, 'income') - by(k, 'expense')), borderColor: '#12B76A', backgroundColor: 'rgba(18,183,106,.15)', fill: true, tension: .3}]}, options: {maintainAspectRatio: false}});
+}
+$('rMonth').addEventListener('input', draw); document.addEventListener('langchange', draw);
+</script><script type="module" src="js/firebase/firebase-bridge.js"></script></body></html>
